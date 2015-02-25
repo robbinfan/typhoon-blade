@@ -90,6 +90,11 @@ class BladeConfig(object):
                 'protoc_php_plugin': '',
             },
 
+            'protorpc_library_config': {
+                'protorpc_plugin': '',
+                'protorpc_libs': []
+            },
+
             'cc_config': {
                 'extra_incs': [],
                 'cppflags': [],
@@ -223,6 +228,9 @@ def proto_library_config(append=None, **kwargs):
 
     blade_config.update_config('proto_library_config', append, kwargs)
 
+def protorpc_library_config(append=None, **kwargs):
+    """protorpc config. """
+    blade_config.update_config('protorpc_library_config', append, kwargs)
 
 def thrift_library_config(append=None, **kwargs):
     """thrift config. """

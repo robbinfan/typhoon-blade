@@ -224,6 +224,12 @@ class CmdArguments(object):
             action='store_true', default=False,
             help='Generate php files for proto_library and swig_library.')
 
+        parser.add_argument(
+            '--generate-rpc', dest='generate_rpc',
+            action='store_true', default=False,
+            help='Generate rpc files for proto_library.')
+
+
     def __add_build_actions_arguments(self, parser):
         """Add build related action arguments. """
         parser.add_argument(

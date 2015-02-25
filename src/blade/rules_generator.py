@@ -222,6 +222,9 @@ compile_proto_php_message = '%sCompiling %s$SOURCE%s to php source%s' % \
 compile_proto_python_message = '%sCompiling %s$SOURCE%s to python source%s' % \
     (colors('cyan'), colors('purple'), colors('cyan'), colors('end'))
 
+compile_proto_rpc_message = '%sCompiling %s$SOURCE%s to rpc source%s' % \
+    (colors('cyan'), colors('purple'), colors('cyan'), colors('end'))
+
 compile_thrift_cc_message = '%sCompiling %s$SOURCE%s to cc source%s' % \
     (colors('cyan'), colors('purple'), colors('cyan'), colors('end'))
 
@@ -317,6 +320,10 @@ top_env.Append(
         protobuf_incs_str = _incs_list_to_string(proto_config['protobuf_incs'])
         protobuf_php_path = proto_config['protobuf_php_path']
         protoc_php_plugin = proto_config['protoc_php_plugin']
+
+        protorpc_config = configparse.blade_config.get_config('protorpc_library_config')
+        protorpc_plugin = protorpc_config['protorpc_plugin']
+
         # Genreates common builders now
         builder_list = []
         self._add_rule('time_value = Value("%s")' % time.asctime())
@@ -352,6 +359,19 @@ top_env.Append(
             '$SOURCE", compile_proto_python_message))' % (
                     protoc_bin, protobuf_incs_str, self.build_dir))
         builder_list.append('BUILDERS = {"ProtoPython" : proto_python_bld}')
+
+
+        self._add_rule(
+            'proto_rpc_bld = Builder(action = MakeAction("%s '
+            '--plugin=%s '
+            '--proto_path=. '
+            '-I. %s -I=`dirname $SOURCE` '
+            '--rpc_out=%s '
+            '$SOURCE;'
+            'sed -i \\"s/#include <google\\/protobuf\\/service.h>/#include <claire\\/protorpc\\/service.h>/\\" %s/`dirname $SOURCE`/*.pb.h", compile_proto_rpc_message))' % (
+                protoc_bin, protorpc_plugin, protobuf_incs_str, self.build_dir,
+                self.build_dir))
+        builder_list.append('BUILDERS = {"ProtoRpc" : proto_rpc_bld}')
 
         # Generate thrift library builders.
         thrift_config = configparse.blade_config.get_config('thrift_config')

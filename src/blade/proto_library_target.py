@@ -266,3 +266,140 @@ def proto_library(name,
 
 
 build_rules.register_function(proto_library)
+
+class ProtoRpcLibrary(CcTarget):
+    """A scons proto library target subclass.
+
+    This class is derived from SconsCcTarget.
+
+    """
+    def __init__(self,
+                 name,
+                 srcs,
+                 deps,
+                 optimize,
+                 deprecated,
+                 blade,
+                 kwargs):
+        """Init method.
+
+        Init the protorpc target.
+
+        """
+        srcs_list = var_to_list(srcs)
+        self._check_proto_srcs_name(srcs_list)
+        CcTarget.__init__(self,
+                          name,
+                          'protorpc_library',
+                          srcs,
+                          deps,
+                          '',
+                          [], [], [], optimize, [], [],
+                          blade,
+                          kwargs)
+
+        proto_config = configparse.blade_config.get_config('proto_library_config')
+        protobuf_lib = var_to_list(proto_config['protobuf_libs'])
+
+        protorpc_config = configparse.blade_config.get_config('protorpc_library_config')
+        protorpc_lib = var_to_list(protorpc_config['protorpc_libs'])
+
+        # Hardcode deps rule to thirdparty protobuf lib.
+        self._add_hardcode_library(protobuf_lib)
+        self._add_hardcode_library(protorpc_lib);
+
+        # Link all the symbols by default
+        self.data['link_all_symbols'] = True
+        self.data['deprecated'] = deprecated
+
+    def _check_proto_srcs_name(self, srcs_list):
+        """_check_proto_srcs_name.
+
+        Checks whether the proto file's name ends with 'proto'.
+
+        """
+        err = 0
+        for src in srcs_list:
+            base_name = os.path.basename(src)
+            pos = base_name.rfind('.')
+            if pos == -1:
+                err = 1
+            file_suffix = base_name[pos + 1:]
+            if file_suffix != 'proto':
+                err = 1
+            if err == 1:
+                console.error_exit('invalid proto file name %s' % src)
+
+    def _generate_header_files(self):
+        """Whether this target generates header files during building."""
+        return True
+
+    def _proto_gen_files(self, path, src):
+        """_proto_gen_files. """
+        proto_name = src[:-6]
+        return (self._target_file_path(path, '%s.pb.cc' % proto_name),
+                self._target_file_path(path, '%s.pb.h' % proto_name))
+
+    def scons_rules(self):
+        """scons_rules.
+
+        It outputs the scons rules according to user options.
+
+        """
+        self._prepare_to_generate_rule()
+
+        # Build java source according to its option
+        env_name = self._env_name()
+
+        self.options = self.blade.get_options()
+        self.direct_targets = self.blade.get_direct_targets()
+
+        self._setup_cc_flags()
+
+        sources = []
+        obj_names = []
+        for src in self.srcs:
+            (proto_src, proto_hdr) = self._proto_gen_files(self.path, src)
+
+            self._write_rule('%s.ProtoRpc(["%s", "%s"], "%s")' % (
+                    env_name,
+                    proto_src,
+                    proto_hdr,
+                    os.path.join(self.path, src)))
+            obj_name = "%s_object" % self._generate_variable_name(
+                self.path, src)
+            obj_names.append(obj_name)
+            self._write_rule(
+                '%s = %s.SharedObject(target="%s" + top_env["OBJSUFFIX"], '
+                'source="%s")' % (obj_name,
+                                  env_name,
+                                  proto_src,
+                                  proto_src))
+            sources.append(proto_src)
+        self._write_rule('%s = [%s]' % (self._objs_name(), ','.join(obj_names)))
+        self._write_rule('%s.Depends(%s, %s)' % (
+                         env_name, self._objs_name(), sources))
+
+        self._cc_library()
+        options = self.blade.get_options()
+        if (getattr(options, 'generate_dynamic', False) or
+            self.data.get('build_dynamic', False)):
+            self._dynamic_cc_library()
+
+def protorpc_library(name,
+                     srcs=[],
+                     deps=[],
+                     optimize=[],
+                     deprecated=False,
+                     **kwargs):
+    """protorpc_library target. """
+    protorpc_library_target = ProtoRpcLibrary(name,
+                                              srcs,
+                                              deps,
+                                              optimize,
+                                              deprecated,
+                                              blade.blade,
+                                              kwargs)
+    blade.blade.register_target(protorpc_library_target)
+
+build_rules.register_function(protorpc_library)

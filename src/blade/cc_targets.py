@@ -571,7 +571,7 @@ class CcTarget(Target):
         env_name = self._env_name()
 
         self._setup_cc_flags()
-        self._setup_as_flags()
+        #self._setup_as_flags()
 
         objs = []
         sources = []

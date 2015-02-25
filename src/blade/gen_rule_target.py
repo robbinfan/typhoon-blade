@@ -90,6 +90,7 @@ class GenRuleTarget(Target):
         cmd = cmd.replace('$FIRST_SRC', '$SOURCE')
         cmd = cmd.replace('$FIRST_OUT', '$TARGET')
         cmd = cmd.replace('$BUILD_DIR', self.build_path)
+        cmd = cmd.replace('$CURRENT',  self.path)
         self._write_rule('%s = %s.Command([%s], [%s], "%s")' % (
                 var_name,
                 env_name,
